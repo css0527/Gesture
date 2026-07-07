@@ -1,0 +1,20 @@
+﻿# 编译产物
+*.o
+*.d
+*.elf
+*.hex
+*.bin
+*.lst
+*.map
+
+# 构建目录
+V3F/obj/
+V5F/obj/
+Debug/
+Release/
+build/
+
+# IDE / 工具临时
+.mrs/
+.settings/
+.vscode/
