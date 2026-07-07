@@ -94,7 +94,7 @@ main-build: CH32H417_TFLM_V5F.elf secondary-outputs
 
 # Tool invocations
 CH32H417_TFLM_V5F.elf: $(OBJS) $(USER_OBJS_ESCAPE)
-	@	riscv-wch-elf-g++ -march=rv32imac_zba_zbb_zbc_zbs_xw -mabi=ilp32 -msmall-data-limit=8 -msave-restore -fmax-errors=20 -Os -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -fno-common -Wunused -Wuninitialized -g -T "d:\project\CQLM\MEU\V3Fenable1\V5F\Ld\Link_v5f.ld" -nostartfiles -Xlinker --gc-sections -Wl,-Map,"CH32H417_TFLM_V5F.map" --specs=nano.specs -u _printf_float --specs=nosys.specs -o "CH32H417_TFLM_V5F.elf" $(OBJS) $(LIBS)
+	@	riscv-wch-elf-g++ -march=rv32imac_zba_zbb_zbc_zbs_xw -mabi=ilp32 -msmall-data-limit=8 -msave-restore -fmax-errors=20 -Os -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -fno-common -Wunused -Wuninitialized -g -T "d:\project\CQLM\TFLM\LD\gesture\V5F\Ld\Link_v5f.ld" -nostartfiles -Xlinker --gc-sections -Wl,-Map,"CH32H417_TFLM_V5F.map" --specs=nano.specs -u _printf_float --specs=nosys.specs -o "CH32H417_TFLM_V5F.elf" $(OBJS) $(LIBS)
 CH32H417_TFLM_V5F.bin: CH32H417_TFLM_V5F.elf
 	@	riscv-wch-elf-objcopy -O binary "CH32H417_TFLM_V5F.elf" "CH32H417_TFLM_V5F.bin"
 CH32H417_TFLM_V5F.hex: CH32H417_TFLM_V5F.elf

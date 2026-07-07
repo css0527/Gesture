@@ -14,7 +14,7 @@
 	],
 	"settings": {
 		"mrs.workspace.type": "solution",
-		"mrs.workspace.slnLoaded": "D:\\project\\CQLM\\MEU\\gesture\\CH32H417_TFLM.wvsln",
+		"mrs.workspace.slnLoaded": "D:\\project\\CQLM\\TFLM\\LD\\gesture\\CH32H417_TFLM.wvsln",
 		"mrs.init.arg": "",
 		"files.associations": {
 			"*.c": "c",

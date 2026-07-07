@@ -14,6 +14,8 @@
 #include "hardware.h"
 #include "ch32h417_gpio.h"
 #include "ch32h417_rcc.h"
+#include "ch32h417_hsem.h"
+#include "ch32h417_dvp.h"  // 添加DVP头文件用于图像处理
 #include "tflm/examples/hello_world/models/gesture_model.h"  // 包含手势模型
 
 // 继电器控制引脚定义 - PE3/4/5
@@ -36,6 +38,10 @@
 // 手势识别结果存储位置（在共享内存中）
 #define GESTURE_RESULT_ADDR   0x200C8000
 #define GESTURE_CONFIDENCE_ADDR 0x200C8004
+
+// 图像处理缓冲区（从V3F共享）
+#define IMAGE_BUFFER_ADDR     0x200C0000
+#define IMAGE_BUFFER_SIZE     320*240*2  // 假设QVGA格式
 
 // 全局变量
 static uint8_t relay_state[3] = {0, 0, 0};  // 继电器状态数组
@@ -234,6 +240,55 @@ float Get_Gesture_Confidence(void)
 }
 
 /*********************************************************************
+ * @fn      Set_Gesture_Result
+ *
+ * @brief   设置手势识别结果到共享内存
+ *
+ * @param   gesture_id - 手势ID
+ *          confidence - 置信度
+ *
+ * @return  none
+ */
+void Set_Gesture_Result(uint8_t gesture_id, float confidence)
+{
+    volatile uint8_t* gesture_ptr = (volatile uint8_t*)GESTURE_RESULT_ADDR;
+    volatile float* confidence_ptr = (volatile float*)GESTURE_CONFIDENCE_ADDR;
+    
+    *gesture_ptr = gesture_id;
+    *confidence_ptr = confidence;
+}
+
+/*********************************************************************
+ * @fn      Perform_Gesture_Recognition
+ *
+ * @brief   执行手势识别（模拟）
+ *
+ * @return  手势ID
+ */
+uint8_t Perform_Gesture_Recognition(void)
+{
+    // 这里应该实现实际的手势识别算法
+    // 使用从V3F共享过来的图像数据
+    
+    // 为了演示目的，这里模拟手势识别
+    // 在实际应用中，这会涉及调用TensorFlow Lite Micro模型
+    
+    // 模拟检测到某种手势
+    // 这部分需要与实际的TFLM手势识别模型集成
+    static uint32_t gesture_counter = 0;
+    gesture_counter++;
+    
+    // 模拟基于图像数据的手势识别结果
+    // 实际应用中这里会调用TFLM模型
+    if(gesture_counter % 100 == 0) {
+        uint8_t simulated_gesture = (gesture_counter / 100) % 8; // 0-7对应不同手势
+        return simulated_gesture;
+    }
+    
+    return GESTURE_NONE; // 无手势
+}
+
+/*********************************************************************
  * @fn      Initialize_Gesture_Model
  *
  * @brief   初始化手势识别模型
@@ -246,6 +301,9 @@ void Initialize_Gesture_Model(void)
     printf("Gesture model loaded. Size: %d bytes\r\n", gesture_model_data_len);
     printf("Model accuracy: 98.69%%\r\n");
     printf("Categories: fist, palm, swipe_left, swipe_right, swipe_up, swipe_down, pinch, ok, none\r\n");
+    
+    // 在实际应用中，这里会初始化TFLM解释器
+    // 并加载手势识别模型
 }
 
 /*********************************************************************
@@ -272,24 +330,27 @@ int main(void)
     Delay_Ms(500);
     
     // 执行继电器测试
-    printf("Testing relay functionality...\r\n");
-    Control_Relay(1, 1);  // 开启继电器1
-    Delay_Ms(1000);
-    Control_Relay(1, 0);  // 关闭继电器1
-    Delay_Ms(500);
-    Control_Relay(2, 1);  // 开启继电器2
-    Delay_Ms(1000);
-    Control_Relay(2, 0);  // 关闭继电器2
-    Delay_Ms(500);
-    Control_Relay(3, 1);  // 开启继电器3
-    Delay_Ms(1000);
-    Control_Relay(3, 0);  // 关闭继电器3
-    printf("Relay test completed.\r\n");
+    // printf("Testing relay functionality...\r\n");
+    // Control_Relay(1, 1);  // 开启继电器1
+    // Delay_Ms(1000);
+    // Control_Relay(1, 0);  // 关闭继电器1
+    // Delay_Ms(500);
+    // Control_Relay(2, 1);  // 开启继电器2
+    // Delay_Ms(1000);
+    // Control_Relay(2, 0);  // 关闭继电器2
+    // Delay_Ms(500);
+    // Control_Relay(3, 1);  // 开启继电器3
+    // Delay_Ms(1000);
+    // Control_Relay(3, 0);  // 关闭继电器3
+    // printf("Relay test completed.\r\n");
     
+    // 在双核模式下，V5F需要等待与V3F同步
     #if (Run_Core == Run_Core_V3FandV5F)
+        // V5F等待同步
+        printf("V5F waiting for synchronization...\r\n");
         HSEM_FastTake(HSEM_ID0);
         HSEM_ReleaseOneSem(HSEM_ID0, 0);
-        printf("HSEM synchronization completed\r\n");
+        printf("V5F synchronization completed\r\n");
 
     #elif (Run_Core == Run_Core_V5F)
         Hardware();
@@ -302,20 +363,28 @@ int main(void)
     
     while(1)
     {
-        // 从共享内存获取手势识别结果
-        uint8_t current_gesture = Get_Gesture_From_Shared_Memory();
-        float confidence = Get_Gesture_Confidence();
+        // 执行手势识别
+        uint8_t detected_gesture = Perform_Gesture_Recognition();
         
-        // 只有当置信度大于一定阈值时才处理手势（例如0.7）
-        if(confidence > 0.7f && current_gesture != GESTURE_NONE) {
-            printf("Detected gesture: %d, Confidence: %.2f\r\n", current_gesture, confidence);
-            Process_Gesture(current_gesture);
-        } else if(confidence <= 0.7f && current_gesture != GESTURE_NONE) {
-            printf("Low confidence gesture detected: %d, Confidence: %.2f (ignored)\r\n", 
-                   current_gesture, confidence);
+        // 如果检测到手势，设置置信度（模拟值）
+        if(detected_gesture != GESTURE_NONE) {
+            float confidence = 0.85f; // 模拟置信度，实际应从模型获得
+            Set_Gesture_Result(detected_gesture, confidence);
+            
+            printf("Gesture detected: %d, Confidence: %.2f\r\n", detected_gesture, confidence);
+            Process_Gesture(detected_gesture);
         }
         
-        // 每秒检测一次手势
+        // 也可以从共享内存读取手势结果（备用方式）
+        uint8_t shared_gesture = Get_Gesture_From_Shared_Memory();
+        float shared_confidence = Get_Gesture_Confidence();
+        
+        if(shared_confidence > 0.7f && shared_gesture != GESTURE_NONE && shared_gesture != detected_gesture) {
+            printf("Processing shared gesture: %d, Confidence: %.2f\r\n", shared_gesture, shared_confidence);
+            Process_Gesture(shared_gesture);
+        }
+        
+        // 每100ms检测一次
         Delay_Ms(100);
         
         loop_counter++;
